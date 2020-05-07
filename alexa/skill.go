@@ -3,8 +3,6 @@ package alexa
 import (
 	"errors"
 	"strings"
-	"log"
-	"fmt"
 )
 
 // Skill configures the different Handlers for skill execution.
@@ -37,9 +35,6 @@ func (requestEnvelope *RequestEnvelope) handleRequest(skill *Skill) (*ResponseEn
 	}
 
 	requestType := commonRequest.Type
-
-	log.Println("It's running my lib and here's the request type ", requestType)
-	log.Println(fmt.Sprintf("Request: %v", commonRequest))
 
 	// Create response and map the session attributes from the request
 	response := newResponseEnvelope(requestEnvelope.Session.Attributes)
