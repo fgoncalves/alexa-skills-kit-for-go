@@ -63,7 +63,7 @@ func (requestEnvelope *RequestEnvelope) handleRequest(skill *Skill) (*ResponseEn
 			requestEnvelope.getTypedRequest(&request)
 			skill.OnSessionEnded(&request, response)
 		}
-	} else if strings.HasPrefix(requestType, "AudioPlayer.") {
+	} else if strings.HasPrefix(requestType, "AudioPlayer.") || strings.HasPrefix(requestType, "PlaybackController.") {
 		if skill.OnAudioPlayerState != nil {
 			// Create concrete types
 			if requestType == "AudioPlayer.PlaybackFailed" {

@@ -63,6 +63,54 @@ func TestAudioPlayerDirectives(t *testing.T) {
 	require.Nil(t, metadata["backgroundImage"])
 }
 
+func TestPlayerControllerRequest(t *testing.T) {
+	skill := Skill{
+		ApplicationID:  "amzn1.echo-sdk-ams.app.000000-d0ed-0000-ad00-000000d00ebe",
+		SkipValidation: true,
+	}
+	skillHandler := skill.GetHTTPSkillHandler()
+
+	skill.OnAudioPlayerState = func(request *AudioPlayerRequest, response *ResponseEnvelope) {
+		response.Response.AddAudioPlayerStopDirective()
+		response.Response.AddAudioPlayerClearQueueDirective("CLEAR_ENQUEUED")
+		play := response.Response.AddAudioPlayerPlayDirective("play")
+		play.SetAudioItemStream("url", "token", "previous", 0)
+		play.SetAudioItemMetadata("title", "subtitle")
+	}
+
+	playbackControllerRequest, err := os.Open("../resources/playback_controller_request.json")
+	if err != nil {
+		t.Error("Error reading input file", err)
+	}
+
+	httpRequest := httptest.NewRequest("POST", "/", playbackControllerRequest)
+	responseWriter := httptest.NewRecorder()
+	skillHandler.ServeHTTP(responseWriter, httpRequest)
+	if responseWriter.Code != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			responseWriter.Code, http.StatusOK)
+	}
+	responseBytes, _ := ioutil.ReadAll(responseWriter.Body)
+	fmt.Println("Response:", string(responseBytes))
+	var response map[string]interface{}
+	json.Unmarshal(responseBytes, &response)
+	// The response must not contain image object in the metadata (optional)
+	directives := response["response"].(map[string]interface{})["directives"].([]interface{})
+	playDirective := directives[2].(map[string]interface{})
+	require.Equal(t, "AudioPlayer.Play", playDirective["type"])
+	require.Equal(t, "play", playDirective["playBehavior"])
+	audioItem := playDirective["audioItem"].(map[string]interface{})
+	stream := audioItem["stream"].(map[string]interface{})
+	require.Equal(t, "url", stream["url"])
+	require.Equal(t, "previous", stream["expectedPreviousToken"])
+	require.Equal(t, "token", stream["token"])
+	metadata := audioItem["metadata"].(map[string]interface{})
+	require.Equal(t, "title", metadata["title"])
+	require.Equal(t, "subtitle", metadata["subtitle"])
+	require.Nil(t, metadata["art"])
+	require.Nil(t, metadata["backgroundImage"])
+}
+
 func TestInvalidClearQueueMode(t *testing.T) {
 	var resp Response
 	var buf bytes.Buffer
